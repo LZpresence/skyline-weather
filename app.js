@@ -147,26 +147,27 @@ function feelsLikeF(tF, rh, mph) {
 function wearFor(c) {
   const out = [];
   const lo = c.feelsMin, hi = c.feelsMax;
-  const add = (icon, item, why, short) => out.push({ icon, item, why, short: short || item });
+  // keys drive Kikker's outfit (see kikker.js)
+  const add = (icon, item, why, short, keys = []) => out.push({ icon, item, why, short: short || item, keys });
   if (lo == null) return out;
-  if (lo < 15) add('🧥', 'Insulated winter coat', `Feels as cold as ${r(lo)}°.`, 'Winter coat');
-  else if (lo < 32) add('🧥', 'Heavy coat', `Feels like ${r(lo)}° at the coldest.`, 'Heavy coat');
-  else if (lo < 45) add('🧥', 'Warm jacket', `Feels like ${r(lo)}° at the coldest.`, 'Warm jacket');
-  else if (lo < 58) add('🧥', 'Light jacket or fleece', `Down to about ${r(lo)}°.`, 'Light jacket');
-  else if (lo < 66) add('👕', 'Long sleeves', `Mild, around ${r(lo)}° at the coolest.`, 'Long sleeves');
-  if (lo < 25) add('🧤', 'Hat, gloves and scarf', 'Exposed skin gets cold fast at these temperatures.', 'Hat & gloves');
-  else if (lo < 38) add('🧤', 'Hat and gloves', 'Handy for the coldest part of the day.', 'Gloves');
-  if (hi >= 85) add('🩳', 'Shorts and a breathable tee', `Feels like ${r(hi)}° at the warmest.${c.humid ? ' Humid, so pick moisture-wicking fabric.' : ''}`, 'Shorts & tee');
-  else if (hi >= 74) add('👕', 'T-shirt', `Warms up to around ${r(hi)}°.`, 'T-shirt');
-  else if (hi >= 66 && lo >= 58) add('👕', 'T-shirt with jeans or chinos', `Comfortable, ${r(lo)}–${r(hi)}°.`, 'T-shirt');
-  else if (lo < 66) add('👖', 'Long pants', '', 'Long pants');
+  if (lo < 15) add('🧥', 'Insulated winter coat', `Feels as cold as ${r(lo)}°.`, 'Winter coat', ['coat-winter']);
+  else if (lo < 32) add('🧥', 'Heavy coat', `Feels like ${r(lo)}° at the coldest.`, 'Heavy coat', ['coat-heavy']);
+  else if (lo < 45) add('🧥', 'Warm jacket', `Feels like ${r(lo)}° at the coldest.`, 'Warm jacket', ['coat-warm']);
+  else if (lo < 58) add('🧥', 'Light jacket or fleece', `Down to about ${r(lo)}°.`, 'Light jacket', ['jacket-light']);
+  else if (lo < 66) add('👕', 'Long sleeves', `Mild, around ${r(lo)}° at the coolest.`, 'Long sleeves', ['sleeves']);
+  if (lo < 25) add('🧤', 'Hat, gloves and scarf', 'Exposed skin gets cold fast at these temperatures.', 'Hat & gloves', ['hat', 'gloves', 'scarf']);
+  else if (lo < 38) add('🧤', 'Hat and gloves', 'Handy for the coldest part of the day.', 'Gloves', ['hat', 'gloves']);
+  if (hi >= 85) add('🩳', 'Shorts and a breathable tee', `Feels like ${r(hi)}° at the warmest.${c.humid ? ' Humid, so pick moisture-wicking fabric.' : ''}`, 'Shorts & tee', ['tee', 'shorts']);
+  else if (hi >= 74) add('👕', 'T-shirt', `Warms up to around ${r(hi)}°.`, 'T-shirt', ['tee']);
+  else if (hi >= 66 && lo >= 58) add('👕', 'T-shirt with jeans or chinos', `Comfortable, ${r(lo)}–${r(hi)}°.`, 'T-shirt', ['tee', 'pants']);
+  else if (lo < 66) add('👖', 'Long pants', '', 'Long pants', ['pants']);
   if (hi - lo >= 15) add('🧅', 'Dress in layers', `Swings ${r(hi - lo)}° from ${r(lo)}° to ${r(hi)}°.`, 'Layers');
-  if (c.snow) add('🥾', 'Waterproof boots', 'Snow or ice in the forecast.', 'Boots');
-  if (c.popMax >= 50 || c.thunder) add('☔', 'Rain jacket and umbrella', `${r(c.popMax)}% chance of ${c.snow ? 'precipitation' : 'rain'}${c.thunder ? ', with possible thunderstorms' : ''}.`, 'Umbrella');
-  else if (c.popMax >= 25) add('🌂', 'Pack a small umbrella', `${r(c.popMax)}% chance of ${c.snow ? 'precipitation' : 'rain'}.`, 'Maybe umbrella');
-  if (c.windMax >= 20) add('🌬️', 'Wind-resistant outer layer', `Winds or gusts up to ${r(c.windMax)} mph.`, 'Windbreaker');
-  if (c.uvMax >= 6 || (c.sunny && hi >= 70)) add('🕶️', 'Sunglasses and sunscreen', c.uvMax ? `UV index up to ${r(c.uvMax)}.` : 'Plenty of sun.', 'Sunscreen');
-  if (c.aqi != null && c.aqi > 100) add('😷', 'Consider a mask outdoors', `Air quality index ${r(c.aqi)}.`, 'Mask');
+  if (c.snow) add('🥾', 'Waterproof boots', 'Snow or ice in the forecast.', 'Boots', ['boots']);
+  if (c.popMax >= 50 || c.thunder) add('☔', 'Rain jacket and umbrella', `${r(c.popMax)}% chance of ${c.snow ? 'precipitation' : 'rain'}${c.thunder ? ', with possible thunderstorms' : ''}.`, 'Umbrella', ['umbrella', 'boots']);
+  else if (c.popMax >= 25) add('🌂', 'Pack a small umbrella', `${r(c.popMax)}% chance of ${c.snow ? 'precipitation' : 'rain'}.`, 'Maybe umbrella', ['umbrella-maybe']);
+  if (c.windMax >= 20) add('🌬️', 'Wind-resistant outer layer', `Winds or gusts up to ${r(c.windMax)} mph.`, 'Windbreaker', ['wind']);
+  if (c.uvMax >= 6 || (c.sunny && hi >= 70)) add('🕶️', 'Sunglasses and sunscreen', c.uvMax ? `UV index up to ${r(c.uvMax)}.` : 'Plenty of sun.', 'Sunscreen', ['sun']);
+  if (c.aqi != null && c.aqi > 100) add('😷', 'Consider a mask outdoors', `Air quality index ${r(c.aqi)}.`, 'Mask', ['mask']);
   return out;
 }
 
@@ -306,7 +307,8 @@ function derive(d, loc) {
   let span = hours.filter((h) => h.ymd === todayYmd && h.hour < 22);
   let spanLabel = 'today';
   if (span.length < 3) { const tmr = ymds.find((y) => y !== todayYmd); span = hours.filter((h) => h.ymd === tmr && h.hour >= 6 && h.hour < 22); spanLabel = 'tomorrow'; }
-  const wear = wearFor(conditions(span));
+  const spanCond = conditions(span);
+  const wear = wearFor(spanCond);
 
   // sun
   const sun = sunOn(todayYmd);
@@ -314,7 +316,7 @@ function derive(d, loc) {
   const aqCur = d.aq && d.aq.current ? d.aq.current : null;
   const uvMax = Math.max(0, ...hours.filter((h) => h.ymd === todayYmd && h.uv != null).map((h) => h.uv));
 
-  return { tz, cur, hours, days, parts, wear, spanLabel, sun, sunY, aqCur, uvMax, alerts: d.alerts, at: d.at };
+  return { tz, cur, hours, days, parts, wear, spanLabel, spanCond, sun, sunY, aqCur, uvMax, alerts: d.alerts, at: d.at };
 }
 
 function conditions(hs) {
@@ -373,7 +375,7 @@ function render() {
         <div class="cond">${esc(c.text)}</div>
         <div class="sub">Feels like ${r(c.feels)}°</div>
       </div>
-      <div class="heroicon">${iconFor(c.text, c.isDay)}</div>
+      <button class="kikker" id="kikkerBtn" aria-label="Kikker's outfit. Show what to wear">${kikkerFor(v)}</button>
     </div>
     <div class="hilo">
       ${today.hi != null ? `<span>High <b class="num">${r(today.hi)}°</b></span>` : ''}
@@ -475,10 +477,23 @@ function render() {
 
   $('main').innerHTML = `
     <section><h2>The day ahead</h2><div class="parts">${partsHtml}</div></section>
-    <section><h2>What to wear <small>${v.spanLabel}</small></h2><div class="wear">${wearHtml}</div></section>
+    <section id="wearSection"><h2>What Kikker recommends <small>${v.spanLabel}</small></h2><div class="wear">${wearHtml}</div></section>
     <section><h2>Next 48 hours <small>rain chance · wind mph · humidity</small></h2>${hourlyHtml}</section>
     <section><h2>7-day forecast <small>tap a day for details</small></h2>${dailyHtml}</section>
     <section><h2>Right now</h2>${detailsHtml}</section>`;
+}
+
+/* Kikker wears the outfit for the rest of the day; the scene shows that stretch's weather. */
+function kikkerFor(v) {
+  if (typeof kikkerSvg !== 'function') return iconFor(v.cur.text, v.cur.isDay);
+  const keys = new Set(v.wear.flatMap((w) => w.keys || []));
+  const c = v.spanCond;
+  const t = (v.cur.text || '').toLowerCase();
+  const precip = c.snow && (c.popMax >= 30 || /snow|flurr/.test(t)) ? 'snow'
+    : (c.popMax >= 50 || /rain|shower|drizzle|thunder/.test(t)) ? 'rain' : null;
+  const mood = c.feelsMin != null && c.feelsMin < 32 ? 'cold'
+    : (!precip && c.feelsMax >= 60 && c.feelsMax <= 85) ? 'happy' : 'meh';
+  return kikkerSvg(keys, { precip, thunder: c.thunder, sunny: c.sunny, night: !v.cur.isDay, windy: c.windMax >= 20, mood });
 }
 
 function curveSvg(H) {
@@ -502,6 +517,7 @@ function curveSvg(H) {
 document.addEventListener('click', (e) => {
   const a = e.target.closest('[data-alert]');
   if (a) { const p = a.querySelector('p'); p.hidden = !p.hidden; a.setAttribute('aria-expanded', String(!p.hidden)); return; }
+  if (e.target.closest('#kikkerBtn')) { $('wearSection').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   const dr = e.target.closest('[data-day]');
   if (dr) { const det = dr.nextElementSibling; det.hidden = !det.hidden; dr.setAttribute('aria-expanded', String(!det.hidden)); }
 });
