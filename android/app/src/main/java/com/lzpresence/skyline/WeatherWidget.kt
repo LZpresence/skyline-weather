@@ -58,7 +58,7 @@ class WeatherWidget : AppWidgetProvider() {
         fun renderMessage(ctx: Context, msg: String) {
             val v = baseViews(ctx)
             v.setTextViewText(R.id.cond, msg)
-            v.setTextViewText(R.id.place, "Tap to open Skyline")
+            v.setTextViewText(R.id.place, "Tap to open Kikker Forecast")
             push(ctx, v)
         }
     }

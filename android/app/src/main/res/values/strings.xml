@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Skyline</string>
-    <string name="widget_name">Skyline + Kikker</string>
+    <string name="app_name">Kikker</string>
+    <string name="widget_name">Kikker Forecast</string>
     <string name="widget_desc">Current temperature with Kikker dressed for the day</string>
 </resources>

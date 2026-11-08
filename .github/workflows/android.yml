@@ -46,14 +46,14 @@ jobs:
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Name the APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk skyline.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk kikker-forecast.apk
 
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: android-v${{ github.run_number }}
-          name: Skyline for Android (build ${{ github.run_number }})
+          name: Kikker Forecast for Android (build ${{ github.run_number }})
           body: |
-            On your Android phone, download **skyline.apk** below and open it to install.
-            Then long-press your home screen, choose Widgets, and add "Skyline + Kikker".
-          files: skyline.apk
+            On your Android phone, download **kikker-forecast.apk** below and open it to install.
+            Then long-press your home screen, choose Widgets, and add "Kikker Forecast".
+          files: kikker-forecast.apk
           make_latest: true

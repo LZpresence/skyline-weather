@@ -1,4 +1,4 @@
-# Skyline Weather
+# Kikker Forecast
 
 Ad-free weather for your phone, built on the National Weather Service API.
 Hourly and 7-day forecasts, morning/afternoon/evening summaries, clothing suggestions,

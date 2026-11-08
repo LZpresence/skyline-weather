@@ -15,7 +15,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
-/** The full Skyline web app, full screen, with device location passed through. */
+/** The full Kikker Forecast web app, full screen, with device location passed through. */
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private var geoCallback: GeolocationPermissions.Callback? = null

@@ -1,4 +1,4 @@
-/* Kikker — the Skyline mascot, drawn after a well-loved green frog stuffy.
+/* Kikker — the Kikker Forecast mascot, drawn after a well-loved green frog stuffy.
    kikkerSvg(outfit, scene) returns an SVG string. outfit is a Set of keys from wearFor():
    coat-winter, coat-heavy, coat-warm, jacket-light, wind, sleeves, tee, shorts, pants,
    hat, gloves, scarf, boots, umbrella, umbrella-maybe, sun, mask.

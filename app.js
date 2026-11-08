@@ -1,4 +1,4 @@
-/* Skyline Weather — National Weather Service forecast, no ads, no tracking.
+/* Kikker Forecast — National Weather Service forecast, no ads, no tracking.
    Data: api.weather.gov (forecast, hourly, grid, observations, alerts),
    air-quality-api.open-meteo.com (US AQI + UV; NWS publishes no air quality),
    geocoding-api.open-meteo.com (city search). Sunrise/sunset computed locally. */

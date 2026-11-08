@@ -28,12 +28,12 @@ data class Wx(
     val keys: Set<String>, val scene: Scene,
 )
 
-class NoLocationException : Exception("Open Skyline once to set your location")
+class NoLocationException : Exception("Open Kikker Forecast once to set your location")
 
 /** Same forecast logic as the web app, trimmed to what the widget shows. */
 object Weather {
     private const val NWS = "https://api.weather.gov"
-    private const val UA = "SkylineWeather/1.0 (personal Android widget)"
+    private const val UA = "KikkerForecast/1.0 (personal Android widget)"
 
     private data class H(
         val t: Long, val ymd: String, val hour: Int, val temp: Double, val text: String,
