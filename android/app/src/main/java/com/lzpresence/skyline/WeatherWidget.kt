@@ -46,8 +46,11 @@ class WeatherWidget : AppWidgetProvider() {
 
         fun render(ctx: Context, wx: Wx) {
             val v = baseViews(ctx)
-            v.setTextViewText(R.id.temp, "${wx.temp ?: "--"}°")
-            val hilo = listOfNotNull(wx.hi?.let { "H $it°" }, wx.lo?.let { "L $it°" }).joinToString("  ")
+            // °F or °C, following the switch in the app
+            val metric = ctx.getSharedPreferences("skyline", Context.MODE_PRIVATE).getString("units", "us") == "metric"
+            fun t(f: Int?): Int? = f?.let { if (metric) Math.round((it - 32) * 5 / 9.0).toInt() else it }
+            v.setTextViewText(R.id.temp, "${t(wx.temp) ?: "--"}°")
+            val hilo = listOfNotNull(t(wx.hi)?.let { "H $it°" }, t(wx.lo)?.let { "L $it°" }).joinToString("  ")
             v.setTextViewText(R.id.hilo, hilo)
             v.setTextViewText(R.id.cond, wx.text)
             v.setTextViewText(R.id.place, wx.place)

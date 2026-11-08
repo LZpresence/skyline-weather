@@ -19,6 +19,14 @@ const kmhToMph = (k) => (k == null ? null : k * 0.621371);
 const mToMi = (m) => (m == null ? null : m / 1609.344);
 const paToInHg = (p) => (p == null ? null : p / 3386.39);
 const r = (x) => (x == null || isNaN(x) ? '–' : Math.round(x));
+/* display units: everything is computed in °F / mph, converted only for display */
+const isC = () => store.get('wx.units', 'us') === 'metric';
+const T = (f) => (f == null || isNaN(f) ? '–' : Math.round(isC() ? (f - 32) * 5 / 9 : f));
+const dT = (d) => (d == null || isNaN(d) ? '–' : Math.round(isC() ? d * 5 / 9 : d));
+const deg = (f) => `${T(f)}°`;
+const SPD = (mph) => (mph == null || isNaN(mph) ? '–' : Math.round(isC() ? mph * 1.609344 : mph));
+const spdU = () => (isC() ? 'km/h' : 'mph');
+const spd = (mph) => `${SPD(mph)} ${spdU()}`;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 const dirToDeg = (d) => { const i = DIRS.indexOf(d); return i < 0 ? null : i * 22.5; };
@@ -150,22 +158,22 @@ function wearFor(c) {
   // keys drive Kikker's outfit (see kikker.js)
   const add = (icon, item, why, short, keys = []) => out.push({ icon, item, why, short: short || item, keys });
   if (lo == null) return out;
-  if (lo < 15) add('🧥', 'Insulated winter coat', `Feels as cold as ${r(lo)}°.`, 'Winter coat', ['coat-winter']);
-  else if (lo < 32) add('🧥', 'Heavy coat', `Feels like ${r(lo)}° at the coldest.`, 'Heavy coat', ['coat-heavy']);
-  else if (lo < 45) add('🧥', 'Warm jacket', `Feels like ${r(lo)}° at the coldest.`, 'Warm jacket', ['coat-warm']);
-  else if (lo < 58) add('🧥', 'Light jacket or fleece', `Down to about ${r(lo)}°.`, 'Light jacket', ['jacket-light']);
-  else if (lo < 66) add('👕', 'Long sleeves', `Mild, around ${r(lo)}° at the coolest.`, 'Long sleeves', ['sleeves']);
+  if (lo < 15) add('🧥', 'Insulated winter coat', `Feels as cold as ${deg(lo)}.`, 'Winter coat', ['coat-winter']);
+  else if (lo < 32) add('🧥', 'Heavy coat', `Feels like ${deg(lo)} at the coldest.`, 'Heavy coat', ['coat-heavy']);
+  else if (lo < 45) add('🧥', 'Warm jacket', `Feels like ${deg(lo)} at the coldest.`, 'Warm jacket', ['coat-warm']);
+  else if (lo < 58) add('🧥', 'Light jacket or fleece', `Down to about ${deg(lo)}.`, 'Light jacket', ['jacket-light']);
+  else if (lo < 66) add('👕', 'Long sleeves', `Mild, around ${deg(lo)} at the coolest.`, 'Long sleeves', ['sleeves']);
   if (lo < 25) add('🧤', 'Hat, gloves and scarf', 'Exposed skin gets cold fast at these temperatures.', 'Hat & gloves', ['hat', 'gloves', 'scarf']);
   else if (lo < 38) add('🧤', 'Hat and gloves', 'Handy for the coldest part of the day.', 'Gloves', ['hat', 'gloves']);
-  if (hi >= 85) add('🩳', 'Shorts and a breathable tee', `Feels like ${r(hi)}° at the warmest.${c.humid ? ' Humid, so pick moisture-wicking fabric.' : ''}`, 'Shorts & tee', ['tee', 'shorts']);
-  else if (hi >= 74) add('👕', 'T-shirt', `Warms up to around ${r(hi)}°.`, 'T-shirt', ['tee']);
-  else if (hi >= 66 && lo >= 58) add('👕', 'T-shirt with jeans or chinos', `Comfortable, ${r(lo)}–${r(hi)}°.`, 'T-shirt', ['tee', 'pants']);
+  if (hi >= 85) add('🩳', 'Shorts and a breathable tee', `Feels like ${deg(hi)} at the warmest.${c.humid ? ' Humid, so pick moisture-wicking fabric.' : ''}`, 'Shorts & tee', ['tee', 'shorts']);
+  else if (hi >= 74) add('👕', 'T-shirt', `Warms up to around ${deg(hi)}.`, 'T-shirt', ['tee']);
+  else if (hi >= 66 && lo >= 58) add('👕', 'T-shirt with jeans or chinos', `Comfortable, ${r(lo)}–${deg(hi)}.`, 'T-shirt', ['tee', 'pants']);
   else if (lo < 66) add('👖', 'Long pants', '', 'Long pants', ['pants']);
-  if (hi - lo >= 15) add('🧅', 'Dress in layers', `Swings ${r(hi - lo)}° from ${r(lo)}° to ${r(hi)}°.`, 'Layers');
+  if (hi - lo >= 15) add('🧅', 'Dress in layers', `Swings ${dT(hi - lo)}° from ${deg(lo)} to ${deg(hi)}.`, 'Layers');
   if (c.snow) add('🥾', 'Waterproof boots', 'Snow or ice in the forecast.', 'Boots', ['boots']);
   if (c.popMax >= 50 || c.thunder) add('☔', 'Rain jacket and umbrella', `${r(c.popMax)}% chance of ${c.snow ? 'precipitation' : 'rain'}${c.thunder ? ', with possible thunderstorms' : ''}.`, 'Umbrella', ['umbrella', 'boots']);
   else if (c.popMax >= 25) add('🌂', 'Pack a small umbrella', `${r(c.popMax)}% chance of ${c.snow ? 'precipitation' : 'rain'}.`, 'Maybe umbrella', ['umbrella-maybe']);
-  if (c.windMax >= 20) add('🌬️', 'Wind-resistant outer layer', `Winds or gusts up to ${r(c.windMax)} mph.`, 'Windbreaker', ['wind']);
+  if (c.windMax >= 20) add('🌬️', 'Wind-resistant outer layer', `Winds or gusts up to ${spd(c.windMax)}.`, 'Windbreaker', ['wind']);
   if (c.uvMax >= 6 || (c.sunny && hi >= 70)) add('🕶️', 'Sunglasses and sunscreen', c.uvMax ? `UV index up to ${r(c.uvMax)}.` : 'Plenty of sun.', 'Sunscreen', ['sun']);
   if (c.aqi != null && c.aqi > 100) add('😷', 'Consider a mask outdoors', `Air quality index ${r(c.aqi)}.`, 'Mask', ['mask']);
   return out;
@@ -176,17 +184,20 @@ async function loadAll(loc) {
   const key = `wx.pt.${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}`;
   let pt = store.get(key, null);
   if (!pt) {
-    let p;
+    let p = null;
     try { p = await getJSON(`${NWS}/points/${loc.lat.toFixed(4)},${loc.lon.toFixed(4)}`); }
     catch (e) {
-      if (e.status === 404) throw new Error('The National Weather Service only covers the United States and its territories. Pick a US location.');
-      throw e;
+      // outside NWS coverage: use the Met Office / Open-Meteo forecast instead
+      if (e.status === 404) { pt = { provider: 'om' }; store.set(key, pt); } else throw e;
     }
-    const pp = p.properties, rl = pp.relativeLocation && pp.relativeLocation.properties;
-    pt = { forecast: pp.forecast, hourly: pp.forecastHourly, grid: pp.forecastGridData, stations: pp.observationStations,
-      tz: pp.timeZone, place: rl ? `${rl.city}, ${rl.state}` : null, office: pp.cwa };
-    store.set(key, pt);
+    if (p) {
+      const pp = p.properties, rl = pp.relativeLocation && pp.relativeLocation.properties;
+      pt = { forecast: pp.forecast, hourly: pp.forecastHourly, grid: pp.forecastGridData, stations: pp.observationStations,
+        tz: pp.timeZone, place: rl ? `${rl.city}, ${rl.state}` : null, office: pp.cwa };
+      store.set(key, pt);
+    }
   }
+  if (pt.provider) return loadModel(loc);
   const lat = loc.lat.toFixed(4), lon = loc.lon.toFixed(4);
   const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}`
     + '&current=us_aqi,us_aqi_pm2_5,us_aqi_ozone,us_aqi_pm10,uv_index&hourly=us_aqi,uv_index&timezone=auto&forecast_days=2';
@@ -205,6 +216,91 @@ async function loadAll(loc) {
     alerts: alerts.status === 'fulfilled' ? alerts.value.features.map((f) => f.properties) : [],
     obs: obs.status === 'fulfilled' ? obs.value : null,
     aq: aq.status === 'fulfilled' ? aq.value : null,
+  };
+}
+
+/* ---------- outside the US: Open-Meteo, with the Met Office model in the UK and Ireland ----------
+   The result is reshaped to look like the NWS responses so the rest of the app works unchanged. */
+const WMO = {
+  0: ['Sunny', 'Clear'], 1: ['Mostly Sunny', 'Mostly Clear'], 2: ['Partly Cloudy'], 3: ['Cloudy'],
+  45: ['Fog'], 48: ['Freezing Fog'], 51: ['Light Drizzle'], 53: ['Drizzle'], 55: ['Heavy Drizzle'],
+  56: ['Freezing Drizzle'], 57: ['Freezing Drizzle'], 61: ['Light Rain'], 63: ['Rain'], 65: ['Heavy Rain'],
+  66: ['Freezing Rain'], 67: ['Freezing Rain'], 71: ['Light Snow'], 73: ['Snow'], 75: ['Heavy Snow'], 77: ['Snow Grains'],
+  80: ['Light Rain Showers'], 81: ['Rain Showers'], 82: ['Heavy Rain Showers'], 85: ['Snow Showers'], 86: ['Heavy Snow Showers'],
+  95: ['Thunderstorms'], 96: ['Thunderstorms with Hail'], 99: ['Thunderstorms with Hail'],
+};
+const wmoText = (code, day = true) => { const w = WMO[code] || ['Cloudy']; return day ? w[0] : (w[1] || w[0]); };
+const inUK = (lat, lon) => lat > 49.8 && lat < 61 && lon > -11 && lon < 2;
+
+function omDetail(o) {
+  const bits = [wmoText(o.code, !o.night) + '.'];
+  bits.push(o.night ? `Low around ${deg(o.loF)}.` : `High near ${deg(o.hiF)}.`);
+  if (o.pop >= 20) bits.push(`${r(o.pop)}% chance of precipitation.`);
+  if (!o.night && o.windMph >= 10) bits.push(`Winds up to ${spd(o.windMph)}.`);
+  return bits.join(' ');
+}
+
+async function placeName(loc) {
+  if (loc.label) return loc.label;
+  try {
+    const j = await getJSON(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${loc.lat.toFixed(4)}&longitude=${loc.lon.toFixed(4)}&localityLanguage=en`, 1);
+    const town = j.city || j.locality || j.principalSubdivision;
+    const country = /United Kingdom/.test(j.countryName || '') ? 'UK' : j.countryName;
+    return [town, country].filter(Boolean).join(', ');
+  } catch { return null; }
+}
+
+async function loadModel(loc) {
+  const lat = loc.lat.toFixed(4), lon = loc.lon.toFixed(4);
+  const uk = inUK(loc.lat, loc.lon);
+  const vars = 'temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,is_day';
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}${uk ? '&models=ukmo_seamless' : ''}`
+    + `&timezone=auto&timeformat=unixtime&forecast_days=7&current=${vars},pressure_msl&hourly=${vars}`
+    + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max';
+  const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}`
+    + '&current=us_aqi,us_aqi_pm2_5,us_aqi_ozone,us_aqi_pm10,uv_index&hourly=us_aqi,uv_index&timezone=auto&forecast_days=2';
+  const [fx, aq, name] = await Promise.allSettled([getJSON(url), getJSON(aqUrl, 2), placeName(loc)]);
+  if (fx.status !== 'fulfilled') throw new Error('The forecast service did not respond. Try again in a minute.');
+  const f = fx.value, H = f.hourly, D = f.daily, C = f.current;
+  const iso = (sec) => new Date(sec * 1000).toISOString();
+  // the Met Office model sometimes omits rain chance; estimate it from rainfall amount
+  const popAt = (i) => (H.precipitation_probability && H.precipitation_probability[i] != null ? H.precipitation_probability[i]
+    : (H.precipitation[i] >= 0.5 ? 70 : H.precipitation[i] > 0 ? 35 : 0));
+  const series = (arr) => ({ values: H.time.map((t, i) => ({ validTime: `${iso(t)}/PT1H`, value: arr[i] })) });
+
+  const hourly = H.time.map((t, i) => ({
+    startTime: iso(t), endTime: iso(t + 3600), temperature: cToF(H.temperature_2m[i]), temperatureUnit: 'F',
+    shortForecast: wmoText(H.weather_code[i], H.is_day[i] === 1), isDaytime: H.is_day[i] === 1,
+    probabilityOfPrecipitation: { value: popAt(i) }, relativeHumidity: { value: H.relative_humidity_2m[i] },
+    dewpoint: { value: H.dew_point_2m[i] }, windSpeed: `${Math.round(kmhToMph(H.wind_speed_10m[i]) || 0)} mph`,
+    windDirection: degToDir(H.wind_direction_10m[i]),
+  }));
+  const daily = [];
+  const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: f.timezone });
+  D.time.forEach((t, i) => {
+    const code = D.weather_code[i], name = dayName.format(new Date((t + 43200) * 1000));
+    const pop = D.precipitation_probability_max && D.precipitation_probability_max[i] != null ? D.precipitation_probability_max[i] : 0;
+    const hiF = cToF(D.temperature_2m_max[i]);
+    const loF = cToF(D.temperature_2m_min[i + 1] != null ? D.temperature_2m_min[i + 1] : D.temperature_2m_min[i]);
+    daily.push({ name, isDaytime: true, startTime: iso(t + 6 * 3600), temperature: Math.round(hiF), shortForecast: wmoText(code, true),
+      detailedForecast: '', probabilityOfPrecipitation: { value: pop }, _om: { code, hiF, pop, windMph: kmhToMph(D.wind_speed_10m_max[i]), night: false } });
+    daily.push({ name: `${name} Night`, isDaytime: false, startTime: iso(t + 18 * 3600), temperature: Math.round(loF), shortForecast: wmoText(code, false),
+      detailedForecast: '', probabilityOfPrecipitation: { value: pop }, _om: { code, loF, pop, night: true } });
+  });
+  const source = uk ? 'Met Office UKV via Open-Meteo' : 'Open-Meteo';
+  const obs = {
+    timestamp: iso(C.time), stationName: source, textDescription: wmoText(C.weather_code, C.is_day === 1),
+    temperature: { value: C.temperature_2m }, relativeHumidity: { value: C.relative_humidity_2m }, dewpoint: { value: C.dew_point_2m },
+    windSpeed: { value: C.wind_speed_10m }, windDirection: { value: C.wind_direction_10m }, windGust: { value: C.wind_gusts_10m },
+    visibility: { value: C.visibility }, barometricPressure: { value: C.pressure_msl != null ? C.pressure_msl * 100 : null },
+    heatIndex: { value: C.apparent_temperature }, windChill: { value: null },
+  };
+  return {
+    at: Date.now(),
+    pt: { provider: uk ? 'ukmo' : 'om', tz: f.timezone, place: name.status === 'fulfilled' ? name.value : null },
+    daily, hourly,
+    grid: { apparentTemperature: series(H.apparent_temperature), visibility: series(H.visibility), windGust: series(H.wind_gusts_10m) },
+    alerts: [], obs, aq: aq.status === 'fulfilled' ? aq.value : null,
   };
 }
 
@@ -283,8 +379,8 @@ function derive(d, loc) {
     let day = days.find((x) => x.ymd === l.ymd);
     if (!day) { day = { ymd: l.ymd, wd: l.wd, name: p.name.replace(/ ?Night$/, '') }; days.push(day); }
     const pop = (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0;
-    if (p.isDaytime) { day.hi = p.temperature; day.dayText = p.shortForecast; day.dayDetail = p.detailedForecast; day.dayName = p.name; day.pop = Math.max(day.pop || 0, pop); }
-    else { day.lo = p.temperature; day.nightText = p.shortForecast; day.nightDetail = p.detailedForecast; day.nightName = p.name; day.pop = Math.max(day.pop || 0, pop); }
+    if (p.isDaytime) { day.hi = p.temperature; day.dayText = p.shortForecast; day.dayDetail = p.detailedForecast; day.dayOm = p._om; day.dayName = p.name; day.pop = Math.max(day.pop || 0, pop); }
+    else { day.lo = p.temperature; day.nightText = p.shortForecast; day.nightDetail = p.detailedForecast; day.nightOm = p._om; day.nightName = p.name; day.pop = Math.max(day.pop || 0, pop); }
   }
   if (days[0]) days[0].name = days[0].hi == null ? 'Tonight' : 'Today';
 
@@ -340,18 +436,18 @@ function summarize(hs) {
   const tmin = Math.min(...hs.map((h) => h.temp)), tmax = Math.max(...hs.map((h) => h.temp));
   const c = conditions(hs);
   const bits = [dominant + '.'];
-  if (last - first >= 4) bits.push(`Warming from ${r(first)}° to ${r(last)}°.`);
-  else if (first - last >= 4) bits.push(`Cooling from ${r(first)}° to ${r(last)}°.`);
-  else bits.push(tmin === tmax ? `Around ${r(tmin)}°.` : `${r(tmin)}° to ${r(tmax)}°.`);
+  if (last - first >= 4) bits.push(`Warming from ${deg(first)} to ${deg(last)}.`);
+  else if (first - last >= 4) bits.push(`Cooling from ${deg(first)} to ${deg(last)}.`);
+  else bits.push(tmin === tmax ? `Around ${deg(tmin)}.` : `${deg(tmin)} to ${deg(tmax)}.`);
   const fAvg = c.feelsMin == null ? null : (c.feelsMin + c.feelsMax) / 2;
-  if (fAvg != null && Math.abs(fAvg - (tmin + tmax) / 2) >= 5) bits.push(`Feels like ${r(fAvg)}°.`);
+  if (fAvg != null && Math.abs(fAvg - (tmin + tmax) / 2) >= 5) bits.push(`Feels like ${deg(fAvg)}.`);
   if (c.popMax >= 20) bits.push(`${r(c.popMax)}% chance of ${c.snow ? 'snow' : c.thunder ? 'storms' : 'rain'}.`);
   const dirs = {};
   hs.forEach((h) => { dirs[h.dir] = (dirs[h.dir] || 0) + 1; });
   const dir = Object.entries(dirs).sort((a, b) => b[1] - a[1])[0][0];
   const wmax = Math.max(...hs.map((h) => h.wind)), gmax = Math.max(0, ...hs.map((h) => h.gust || 0));
-  if (wmax >= 20 || gmax >= 30) bits.push(`Windy, ${dir} winds to ${r(wmax)} mph${gmax > wmax + 5 ? `, gusts ${r(gmax)}` : ''}.`);
-  else if (wmax >= 10) bits.push(`Breezy, ${dir} winds to ${r(wmax)} mph.`);
+  if (wmax >= 20 || gmax >= 30) bits.push(`Windy, ${dir} winds to ${spd(wmax)}${gmax > wmax + 5 ? `, gusts ${SPD(gmax)}` : ''}.`);
+  else if (wmax >= 10) bits.push(`Breezy, ${dir} winds to ${spd(wmax)}.`);
   else bits.push('Light winds.');
   return { text: dominant, isDay: hs[Math.floor(hs.length / 2)].isDay, summary: bits.join(' '), tmin, tmax, chips: wearFor(c).map((w) => w.short) };
 }
@@ -371,25 +467,25 @@ function render() {
   $('nowBody').innerHTML = `
     <div class="hero">
       <div>
-        <div class="temp num">${r(c.temp)}<sup>°F</sup></div>
+        <div class="temp num">${T(c.temp)}<sup>°${isC() ? 'C' : 'F'}</sup></div>
         <div class="cond">${esc(c.text)}</div>
-        <div class="sub">Feels like ${r(c.feels)}°</div>
+        <div class="sub">Feels like ${deg(c.feels)}</div>
       </div>
       <button class="kikker" id="kikkerBtn" aria-label="Kikker's outfit. Show what to wear">${kikkerFor(v)}</button>
     </div>
     <div class="hilo">
-      ${today.hi != null ? `<span>High <b class="num">${r(today.hi)}°</b></span>` : ''}
-      ${today.lo != null ? `<span>Low <b class="num">${r(today.lo)}°</b></span>` : ''}
-      <span>Wind <b>${c.dirTxt || ''} ${r(c.wind)} mph</b></span>
+      ${today.hi != null ? `<span>High <b class="num">${deg(today.hi)}</b></span>` : ''}
+      ${today.lo != null ? `<span>Low <b class="num">${deg(today.lo)}</b></span>` : ''}
+      <span>Wind <b>${c.dirTxt || ''} ${spd(c.wind)}</b></span>
       <span>Humidity <b>${r(c.rh)}%</b></span>
     </div>
-    <div class="stamp">${c.source === 'forecast' ? 'From the NWS hourly forecast' : `Observed at ${esc(c.source)}, ${age <= 1 ? 'just now' : age + ' min ago'}`} · Updated ${fmtTime(new Date(v.at), tz)}</div>
+    <div class="stamp">${d.pt.provider ? `Forecast model: ${esc(c.source)}` : c.source === 'forecast' ? 'From the NWS hourly forecast' : `Observed at ${esc(c.source)}, ${age <= 1 ? 'just now' : age + ' min ago'}`} · Updated ${fmtTime(new Date(v.at), tz)}</div>
     ${alertsHtml}`;
 
   const partsHtml = v.parts.slice(0, 3).map((p) => `
     <article class="part">
       <div class="pic">${iconFor(p.text, p.isDay)}</div>
-      <div><h3>${esc(p.name)} <span class="num">${r(p.tmin)}°–${r(p.tmax)}°</span></h3>
+      <div><h3>${esc(p.name)} <span class="num">${deg(p.tmin)}–${deg(p.tmax)}</span></h3>
       <p>${esc(p.summary)}</p></div>
       <div class="chips">${p.chips.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>
     </article>`).join('');
@@ -398,7 +494,8 @@ function render() {
 
   // details
   const dewWord = c.dew == null ? '' : c.dew < 55 ? 'Comfortable' : c.dew < 65 ? 'A bit sticky' : 'Muggy';
-  const visTxt = c.vis == null ? '–' : c.vis >= 9.9 ? '10+' : c.vis >= 1 ? c.vis.toFixed(c.vis < 3 ? 1 : 0) : c.vis.toFixed(2);
+  const visU = isC() ? 'km' : 'mi', vv = c.vis == null ? null : isC() ? c.vis * 1.609344 : c.vis;
+  const visTxt = vv == null ? '–' : c.vis >= 9.9 ? (isC() ? '16+' : '10+') : vv >= 1 ? vv.toFixed(vv < 3 ? 1 : 0) : vv.toFixed(2);
   const visWord = c.vis == null ? 'No report nearby' : c.vis >= 9.9 ? 'Clear' : c.vis >= 5 ? 'Good' : c.vis >= 1 ? 'Reduced, haze or precipitation' : 'Poor, likely fog';
   const aqi = v.aqCur ? v.aqCur.us_aqi : null, ai = aqiInfo(aqi);
   let pollutant = '';
@@ -428,17 +525,17 @@ function render() {
 
   const detailsHtml = `
     <div class="grid">
-      <div class="tile"><div class="k">Humidity</div><div class="v num">${r(c.rh)}<small>%</small></div><div class="n">Dew point ${r(c.dew)}°. ${dewWord}</div></div>
-      <div class="tile"><div class="k">Wind</div><div class="v num">${r(c.wind)}<small>mph</small></div>
-        <div class="n">${c.dirDeg != null ? `<span class="compass" style="transform:rotate(${c.dirDeg + 180}deg)">↑</span> ` : ''}From the ${c.dirTxt || '–'}${c.gust && c.gust > (c.wind || 0) + 2 ? `, gusts ${r(c.gust)}` : ''}</div></div>
-      <div class="tile"><div class="k">Visibility</div><div class="v num">${visTxt}<small>mi</small></div><div class="n">${visWord}</div></div>
-      <div class="tile"><div class="k">Feels like</div><div class="v num">${r(c.feels)}<small>°F</small></div><div class="n">${c.feels != null && c.temp != null ? (c.feels < c.temp - 2 ? 'Wind makes it feel colder' : c.feels > c.temp + 2 ? 'Humidity makes it feel warmer' : 'Close to the actual temperature') : ''}</div></div>
+      <div class="tile"><div class="k">Humidity</div><div class="v num">${r(c.rh)}<small>%</small></div><div class="n">Dew point ${deg(c.dew)}. ${dewWord}</div></div>
+      <div class="tile"><div class="k">Wind</div><div class="v num">${SPD(c.wind)}<small>${spdU()}</small></div>
+        <div class="n">${c.dirDeg != null ? `<span class="compass" style="transform:rotate(${c.dirDeg + 180}deg)">↑</span> ` : ''}From the ${c.dirTxt || '–'}${c.gust && c.gust > (c.wind || 0) + 2 ? `, gusts ${SPD(c.gust)}` : ''}</div></div>
+      <div class="tile"><div class="k">Visibility</div><div class="v num">${visTxt}<small>${visU}</small></div><div class="n">${visWord}</div></div>
+      <div class="tile"><div class="k">Feels like</div><div class="v num">${T(c.feels)}<small>°${isC() ? 'C' : 'F'}</small></div><div class="n">${c.feels != null && c.temp != null ? (c.feels < c.temp - 2 ? 'Wind makes it feel colder' : c.feels > c.temp + 2 ? 'Humidity makes it feel warmer' : 'Close to the actual temperature') : ''}</div></div>
       <div class="tile wide"><div class="k">Air quality index</div>
         ${ai ? `<div class="v num" style="display:flex;align-items:baseline;gap:10px">${r(aqi)} <small style="color:${ai.color};font-family:var(--body);font-size:15px;font-weight:700">${ai.name}</small></div>
         <div class="aqi-bar"><i style="left:${(ai.pos * 100).toFixed(1)}%"></i></div>
         <div class="n" style="margin-top:8px">${ai.note} ${pollutant}.</div>` : '<div class="n">Air quality data is unavailable right now.</div>'}</div>
       <div class="tile"><div class="k">UV index</div><div class="v num">${uvNow == null ? '–' : r(uvNow)}</div><div class="n">${uvNow == null ? '' : uvWord(uvNow) + ' now'}${v.uvMax ? `, peak ${r(v.uvMax)} today` : ''}</div></div>
-      <div class="tile"><div class="k">Pressure</div><div class="v num">${c.pressure ? c.pressure.toFixed(2) : '–'}<small>inHg</small></div><div class="n">${c.pressure ? 'At the nearest station' : 'Not reported nearby'}</div></div>
+      <div class="tile"><div class="k">Pressure</div><div class="v num">${c.pressure ? (isC() ? Math.round(c.pressure * 33.8639) : c.pressure.toFixed(2)) : '–'}<small>${isC() ? 'hPa' : 'inHg'}</small></div><div class="n">${c.pressure ? (state.data && state.data.pt.provider ? 'Sea-level pressure' : 'At the nearest station') : 'Not reported nearby'}</div></div>
       <div class="tile wide"><div class="k">Sun</div>${sunHtml}</div>
     </div>`;
 
@@ -448,9 +545,9 @@ function render() {
     <div class="hcol${i === 0 ? ' day0' : ''}${h.hour === 0 && i ? ' newday' : ''}">
       <div class="t">${i === 0 ? 'Now' : h.hour === 0 ? h.wd : fmtHour(new Date(h.t), tz)}</div>
       ${iconFor(h.text, h.isDay)}
-      <div class="tp num">${r(h.temp)}°</div>
+      <div class="tp num">${deg(h.temp)}</div>
       <div class="pp">${h.pop >= 10 ? r(h.pop) + '%' : ''}</div>
-      <div class="ws">${r(h.wind)} ${esc(h.dir || '')}</div>
+      <div class="ws">${SPD(h.wind)} ${esc(h.dir || '')}</div>
       <div class="ws">${r(h.rh)}% RH</div>
     </div>`).join('')}${curveSvg(H)}</div></div>`;
 
@@ -465,20 +562,20 @@ function render() {
         <span class="dn">${i === 0 ? esc(x.name) : x.wd}</span>
         ${iconFor(x.dayText || x.nightText, !!x.dayText)}
         <span class="pp">${x.pop >= 10 ? r(x.pop) + '%' : ''}</span>
-        <span class="range num"><span class="lo">${x.lo != null ? r(x.lo) + '°' : ''}</span>
+        <span class="range num"><span class="lo">${x.lo != null ? deg(x.lo) : ''}</span>
           <span class="track"><i style="left:${((lo - wmin) / span * 100).toFixed(1)}%;right:${(100 - (hi - wmin) / span * 100).toFixed(1)}%"></i></span>
-          <span>${x.hi != null ? r(x.hi) + '°' : ''}</span></span>
+          <span>${x.hi != null ? deg(x.hi) : ''}</span></span>
       </button>
       <div class="daydetail" hidden>
-        ${x.dayDetail ? `<p><b>${esc(x.dayName)}.</b> ${esc(x.dayDetail)}</p>` : ''}
-        ${x.nightDetail ? `<p><b>${esc(x.nightName)}.</b> ${esc(x.nightDetail)}</p>` : ''}
+        ${x.dayDetail || x.dayOm ? `<p><b>${esc(x.dayName)}.</b> ${esc(x.dayOm ? omDetail(x.dayOm) : x.dayDetail)}</p>` : ''}
+        ${x.nightDetail || x.nightOm ? `<p><b>${esc(x.nightName)}.</b> ${esc(x.nightOm ? omDetail(x.nightOm) : x.nightDetail)}</p>` : ''}
       </div></div>`;
   }).join('')}</div>`;
 
   $('main').innerHTML = `
     <section><h2>The day ahead</h2><div class="parts">${partsHtml}</div></section>
     <section id="wearSection"><h2>What Kikker recommends <small>${v.spanLabel}</small></h2><div class="wear">${wearHtml}</div></section>
-    <section><h2>Next 48 hours <small>rain chance · wind mph · humidity</small></h2>${hourlyHtml}</section>
+    <section><h2>Next 48 hours <small>rain chance · wind ${spdU()} · humidity</small></h2>${hourlyHtml}</section>
     <section><h2>7-day forecast <small>tap a day for details</small></h2>${dailyHtml}</section>
     <section><h2>Right now</h2>${detailsHtml}</section>`;
 }
@@ -539,6 +636,7 @@ async function refresh() {
     store.set('wx.loc', state.loc);
     store.set('wx.cache', { loc: state.loc, data: state.data });
     render();
+    if (window.radarPlaceChanged) window.radarPlaceChanged();
   } catch (e) {
     showError(e.message || 'Could not reach the National Weather Service. Check your connection and try again.');
   } finally { setBusy(false); }
@@ -605,6 +703,20 @@ function pick(loc) {
 $('locBtn').addEventListener('click', openSheet);
 $('gpsBtn').addEventListener('click', useGps);
 $('refreshBtn').addEventListener('click', refresh);
+
+/* °F / °C switch; also tells the Android widget, when running inside the Kikker app */
+function syncUnits() {
+  const c = isC();
+  $('unitBtn').textContent = c ? '°C' : '°F';
+  $('unitBtn').setAttribute('aria-label', c ? 'Showing Celsius. Switch to Fahrenheit' : 'Showing Fahrenheit. Switch to Celsius');
+  try { if (window.KikkerApp) window.KikkerApp.setUnits(c ? 'metric' : 'us'); } catch { /* not in the app */ }
+}
+$('unitBtn').addEventListener('click', () => {
+  store.set('wx.units', isC() ? 'us' : 'metric');
+  syncUnits();
+  if (state.data) render();
+});
+syncUnits();
 $('sheetGps').addEventListener('click', () => { closeSheet(); useGps(); });
 $('sheet').addEventListener('click', (e) => {
   if (e.target === $('sheet')) return closeSheet();
@@ -622,12 +734,15 @@ $('searchForm').addEventListener('submit', async (e) => {
   if (!q) return;
   $('results').innerHTML = '<div class="msg">Searching…</div>';
   try {
-    const j = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=en&format=json&countryCode=US`, 2);
-    const res = (j.results || []);
+    const j = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=10&language=en&format=json`, 2);
+    // US places first, then everywhere else
+    const res = (j.results || []).sort((a, b) => (b.country_code === 'US') - (a.country_code === 'US'));
     $('results').innerHTML = res.length ? res.map((x) => {
-      const loc = { lat: x.latitude, lon: x.longitude, label: `${x.name}, ${x.admin1 || ''}`.replace(/, $/, ''), gps: false };
-      return `<button class="btn" data-res='${esc(JSON.stringify(loc))}'>${esc(loc.label)}<small>${esc(x.admin2 || '')}</small></button>`;
-    }).join('') : '<div class="msg">No US places matched. Try a city name like "Asheville".</div>';
+      const region = x.country_code === 'US' ? x.admin1 : x.country_code === 'GB' ? 'UK' : x.country;
+      const loc = { lat: x.latitude, lon: x.longitude, label: [x.name, region].filter(Boolean).join(', '), gps: false };
+      const sub = x.country_code === 'US' ? x.admin2 : x.admin1;
+      return `<button class="btn" data-res='${esc(JSON.stringify(loc))}'>${esc(loc.label)}<small>${esc(sub || '')}</small></button>`;
+    }).join('') : '<div class="msg">No places matched. Try a city name like "Asheville" or "York".</div>';
   } catch { $('results').innerHTML = '<div class="msg">Search is unavailable. Check your connection.</div>'; }
 });
 

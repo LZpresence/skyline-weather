@@ -1,6 +1,6 @@
 // Caches the app shell so it opens instantly and offline. Weather data is never cached here;
 // the app keeps its last forecast in local storage instead.
-const CACHE = 'kikker-v4';
+const CACHE = 'kikker-v5';
 const SHELL = ['./', 'index.html', 'app.js', 'kikker.js', 'radar.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

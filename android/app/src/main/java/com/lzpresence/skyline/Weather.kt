@@ -1,10 +1,12 @@
 package com.lzpresence.skyline
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -23,21 +25,26 @@ data class Scene(
     val night: Boolean, val windy: Boolean, val mood: String,
 )
 
+/** Temperatures are always °F here; the widget converts for display. */
 data class Wx(
     val place: String, val temp: Int?, val text: String, val hi: Int?, val lo: Int?,
     val keys: Set<String>, val scene: Scene,
 )
 
 class NoLocationException : Exception("Open Kikker Forecast once to set your location")
+class HttpException(val code: Int, host: String) : IOException("HTTP $code from $host")
 
-/** Same forecast logic as the web app, trimmed to what the widget shows. */
+/**
+ * Same forecast logic as the web app, trimmed to what the widget shows.
+ * US: National Weather Service. Elsewhere: Open-Meteo, using the Met Office model in the UK and Ireland.
+ */
 object Weather {
     private const val NWS = "https://api.weather.gov"
     private const val UA = "KikkerForecast/1.0 (personal Android widget)"
 
     private data class H(
         val t: Long, val ymd: String, val hour: Int, val temp: Double, val text: String,
-        val pop: Double, val rh: Double?, val dew: Double?, val wind: Double, val isDay: Boolean,
+        val pop: Double, val rh: Double?, val wind: Double, val isDay: Boolean,
     ) {
         val feels: Double get() = feelsLikeF(temp, rh, wind)
     }
@@ -49,12 +56,12 @@ object Weather {
             var code = -1
             try {
                 c.setRequestProperty("User-Agent", UA)
-                c.setRequestProperty("Accept", "application/geo+json")
+                c.setRequestProperty("Accept", "application/geo+json, application/json")
                 c.connectTimeout = 15000
                 c.readTimeout = 20000
                 code = c.responseCode
                 if (code in 200..299) return JSONObject(c.inputStream.bufferedReader().use { it.readText() })
-                last = IOException("HTTP $code from ${c.url.host}")
+                last = HttpException(code, c.url.host)
             } catch (e: IOException) {
                 last = e
             } finally {
@@ -71,21 +78,32 @@ object Weather {
         val prefs = ctx.getSharedPreferences("skyline", Context.MODE_PRIVATE)
         val key = String.format(Locale.US, "%.3f,%.3f", lat, lon)
         if (prefs.getString("ptKey", null) != key) {
-            val p = get(String.format(Locale.US, "%s/points/%.4f,%.4f", NWS, lat, lon)).getJSONObject("properties")
-            val rl = p.optJSONObject("relativeLocation")?.optJSONObject("properties")
-            prefs.edit()
-                .putString("ptKey", key)
-                .putString("hourly", p.getString("forecastHourly"))
-                .putString("daily", p.getString("forecast"))
-                .putString("stations", p.getString("observationStations"))
-                .putString("tz", p.getString("timeZone"))
-                .putString("place", if (rl != null) "${rl.optString("city")}, ${rl.optString("state")}" else "")
-                .apply()
+            try {
+                val p = get(String.format(Locale.US, "%s/points/%.4f,%.4f", NWS, lat, lon)).getJSONObject("properties")
+                val rl = p.optJSONObject("relativeLocation")?.optJSONObject("properties")
+                prefs.edit()
+                    .putString("ptKey", key).putString("provider", "nws")
+                    .putString("hourly", p.getString("forecastHourly"))
+                    .putString("daily", p.getString("forecast"))
+                    .putString("stations", p.getString("observationStations"))
+                    .putString("tz", p.getString("timeZone"))
+                    .putString("place", if (rl != null) "${rl.optString("city")}, ${rl.optString("state")}" else "")
+                    .apply()
+            } catch (e: HttpException) {
+                if (e.code != 404) throw e
+                // outside NWS coverage
+                prefs.edit().putString("ptKey", key).putString("provider", "model")
+                    .putString("place", reversePlace(lat, lon) ?: "").apply()
+            }
         }
+        return if (prefs.getString("provider", "nws") == "model") loadModel(ctx, lat, lon) else loadNws(ctx, lat, lon)
+    }
+
+    private fun loadNws(ctx: Context, lat: Double, lon: Double): Wx {
+        val prefs = ctx.getSharedPreferences("skyline", Context.MODE_PRIVATE)
         val zone = ZoneId.of(prefs.getString("tz", "America/New_York"))
         val now = System.currentTimeMillis()
 
-        // hourly forecast
         val periods = get(prefs.getString("hourly", "")!!).getJSONObject("properties").getJSONArray("periods")
         val hours = (0 until periods.length()).map { i ->
             val p = periods.getJSONObject(i)
@@ -98,7 +116,6 @@ object Weather {
                 text = p.optString("shortForecast"),
                 pop = p.optJSONObject("probabilityOfPrecipitation")?.optDouble("value", 0.0)?.takeIf { !it.isNaN() } ?: 0.0,
                 rh = p.optJSONObject("relativeHumidity")?.optDouble("value")?.takeIf { !it.isNaN() },
-                dew = p.optJSONObject("dewpoint")?.optDouble("value")?.takeIf { !it.isNaN() }?.let { it * 9 / 5 + 32 },
                 wind = windMax(p.optString("windSpeed")),
                 isDay = p.optBoolean("isDaytime", true),
             )
@@ -106,7 +123,7 @@ object Weather {
         if (hours.isEmpty()) throw IOException("Forecast is empty")
 
         // current temperature: nearest station if its reading is fresh
-        var temp: Double? = hours[0].temp
+        var temp: Double = hours[0].temp
         var text = hours[0].text
         try {
             val st = get(prefs.getString("stations", "")!!, 2).getJSONArray("features")
@@ -123,7 +140,6 @@ object Weather {
             }
         } catch (e: Exception) { /* keep forecast values */ }
 
-        // today's high / low
         var hi: Int? = null
         var lo: Int? = null
         try {
@@ -134,7 +150,56 @@ object Weather {
             } else lo = first.getInt("temperature")
         } catch (e: Exception) { /* optional */ }
 
-        // conditions for the rest of today (or tomorrow if it's late)
+        return finish(prefs.getString("place", "") ?: "", hours, temp, text, hi, lo, zone, lat, lon)
+    }
+
+    private fun loadModel(ctx: Context, lat: Double, lon: Double): Wx {
+        val prefs = ctx.getSharedPreferences("skyline", Context.MODE_PRIVATE)
+        val uk = lat > 49.8 && lat < 61 && lon > -11 && lon < 2
+        val vars = "temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,is_day"
+        val url = String.format(Locale.US, "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f", lat, lon) +
+            (if (uk) "&models=ukmo_seamless" else "") +
+            "&timezone=auto&timeformat=unixtime&forecast_days=3&current=temperature_2m,weather_code,is_day&hourly=$vars" +
+            "&daily=temperature_2m_max,temperature_2m_min"
+        val f = get(url)
+        val zone = ZoneId.of(f.optString("timezone", "UTC"))
+        val now = System.currentTimeMillis()
+        val h = f.getJSONObject("hourly")
+        val time = h.getJSONArray("time")
+        fun arr(name: String): JSONArray? = h.optJSONArray(name)
+        val tempA = arr("temperature_2m")!!
+        val hours = (0 until time.length()).map { i ->
+            val t = time.getLong(i) * 1000
+            val z = Instant.ofEpochMilli(t).atZone(zone)
+            val pop = arr("precipitation_probability")?.let { if (it.isNull(i)) null else it.getDouble(i) }
+                ?: arr("precipitation")?.let { if (it.isNull(i)) 0.0 else if (it.getDouble(i) >= 0.5) 70.0 else if (it.getDouble(i) > 0) 35.0 else 0.0 } ?: 0.0
+            val day = arr("is_day")?.optInt(i, 1) == 1
+            H(
+                t = t, ymd = z.toLocalDate().toString(), hour = z.hour,
+                temp = tempA.optDouble(i) * 9 / 5 + 32,
+                text = wmoText(arr("weather_code")?.optInt(i, 3) ?: 3, day),
+                pop = pop,
+                rh = arr("relative_humidity_2m")?.optDouble(i)?.takeIf { !it.isNaN() },
+                wind = (arr("wind_speed_10m")?.optDouble(i) ?: 0.0).let { if (it.isNaN()) 0.0 else it * 0.621371 },
+                isDay = day,
+            )
+        }.filter { it.t + 3_600_000 > now }
+        if (hours.isEmpty()) throw IOException("Forecast is empty")
+        val cur = f.optJSONObject("current")
+        val temp = cur?.optDouble("temperature_2m")?.takeIf { !it.isNaN() }?.let { it * 9 / 5 + 32 } ?: hours[0].temp
+        val text = cur?.let { wmoText(it.optInt("weather_code", 3), it.optInt("is_day", 1) == 1) } ?: hours[0].text
+        val d = f.optJSONObject("daily")
+        val hi = d?.optJSONArray("temperature_2m_max")?.optDouble(0)?.takeIf { !it.isNaN() }?.let { (it * 9 / 5 + 32).roundToInt() }
+        val lo = d?.optJSONArray("temperature_2m_min")?.optDouble(1)?.takeIf { !it.isNaN() }?.let { (it * 9 / 5 + 32).roundToInt() }
+        return finish(prefs.getString("place", "") ?: "", hours, temp, text, hi, lo, zone, lat, lon)
+    }
+
+    /** Clothing keys and Kikker's scene for the rest of today (or tomorrow if it's late). */
+    private fun finish(
+        place: String, hours: List<H>, temp: Double, text: String, hi: Int?, lo: Int?,
+        zone: ZoneId, lat: Double, lon: Double,
+    ): Wx {
+        val now = System.currentTimeMillis()
         val today = ZonedDateTime.now(zone).toLocalDate().toString()
         var span = hours.filter { it.ymd == today && it.hour < 22 }
         if (span.size < 3) {
@@ -188,10 +253,45 @@ object Weather {
         val night = sun != null && (now < sun.first || now >= sun.second)
 
         return Wx(
-            place = prefs.getString("place", "") ?: "",
-            temp = temp?.roundToInt(), text = text, hi = hi, lo = lo, keys = keys,
+            place = place, temp = temp.roundToInt(), text = text, hi = hi, lo = lo, keys = keys,
             scene = Scene(precip, thunder, sunny, night, windMax >= 20, mood),
         )
+    }
+
+    private fun reversePlace(lat: Double, lon: Double): String? = try {
+        val j = get(String.format(Locale.US, "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f&longitude=%.4f&localityLanguage=en", lat, lon), 1)
+        val town = listOf("city", "locality", "principalSubdivision").map { j.optString(it) }.firstOrNull { it.isNotBlank() }
+        val country = j.optString("countryName").let { if (it.contains("United Kingdom")) "UK" else it }
+        listOfNotNull(town, country.takeIf { it.isNotBlank() }).joinToString(", ")
+    } catch (e: Exception) { null }
+
+    private fun wmoText(code: Int, day: Boolean): String = when (code) {
+        0 -> if (day) "Sunny" else "Clear"
+        1 -> if (day) "Mostly Sunny" else "Mostly Clear"
+        2 -> "Partly Cloudy"
+        3 -> "Cloudy"
+        45 -> "Fog"
+        48 -> "Freezing Fog"
+        51 -> "Light Drizzle"
+        53 -> "Drizzle"
+        55 -> "Heavy Drizzle"
+        56, 57 -> "Freezing Drizzle"
+        61 -> "Light Rain"
+        63 -> "Rain"
+        65 -> "Heavy Rain"
+        66, 67 -> "Freezing Rain"
+        71 -> "Light Snow"
+        73 -> "Snow"
+        75 -> "Heavy Snow"
+        77 -> "Snow Grains"
+        80 -> "Light Rain Showers"
+        81 -> "Rain Showers"
+        82 -> "Heavy Rain Showers"
+        85 -> "Snow Showers"
+        86 -> "Heavy Snow Showers"
+        95 -> "Thunderstorms"
+        96, 99 -> "Thunderstorms with Hail"
+        else -> "Cloudy"
     }
 
     private fun windMax(s: String): Double =

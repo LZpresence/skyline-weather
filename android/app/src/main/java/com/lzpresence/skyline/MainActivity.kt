@@ -10,6 +10,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.webkit.GeolocationPermissions
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -29,6 +30,18 @@ class MainActivity : Activity() {
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         web.settings.setGeolocationEnabled(true)
+        // lets the web app tell the widget which units to show
+        web.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun setUnits(units: String) {
+                val value = if (units == "metric") "metric" else "us"
+                val prefs = getSharedPreferences("skyline", MODE_PRIVATE)
+                if (prefs.getString("units", "us") != value) {
+                    prefs.edit().putString("units", value).apply()
+                    WidgetWorker.runNow(this@MainActivity)
+                }
+            }
+        }, "KikkerApp")
 
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
