@@ -1,6 +1,6 @@
 {
   "name": "Kikker Forecast",
-  "short_name": "Kikker",
+  "short_name": "KikkerForecast",
   "description": "Ad-free NWS forecast with Kikker the frog dressed for the weather",
   "start_url": "./",
   "scope": "./",
