@@ -1,7 +1,7 @@
 // Caches the app shell so it opens instantly and offline. Weather data is never cached here;
 // the app keeps its last forecast in local storage instead.
-const CACHE = 'skyline-v2';
-const SHELL = ['./', 'index.html', 'app.js', 'kikker.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'skyline-v3';
+const SHELL = ['./', 'index.html', 'app.js', 'kikker.js', 'radar.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -552,6 +552,7 @@ function useGps() {
       $('gpsBtn').classList.remove('spin');
       state.loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: null, gps: true };
       $('placeName').textContent = 'Current location';
+      renderCities();
       ok(true); refresh();
     }, (err) => {
       $('gpsBtn').classList.remove('spin');
@@ -560,6 +561,28 @@ function useGps() {
     }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 10 * 60e3 });
   });
 }
+
+/* city tabs across the top: my location, saved cities, add */
+function renderCities() {
+  const saved = store.get('wx.saved', []);
+  const cur = state.loc || {};
+  const gpsIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+  $('cities').innerHTML =
+    `<button class="city${cur.gps ? ' on' : ''}" data-city="gps">${gpsIcon}My location</button>`
+    + saved.map((s, i) => `<button class="city${!cur.gps && cur.label === s.label ? ' on' : ''}" data-city="${i}" title="${esc(s.label)}">${esc(s.label.split(',')[0])}</button>`).join('')
+    + '<button class="city add" data-city="add" aria-label="Add a city">+ Add city</button>';
+  const on = $('cities').querySelector('.on');
+  if (on) on.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  if (window.radarPlaceChanged) window.radarPlaceChanged();
+}
+$('cities').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-city]');
+  if (!b) return;
+  const v = b.dataset.city;
+  if (v === 'gps') useGps();
+  else if (v === 'add') openSheet();
+  else pick(store.get('wx.saved', [])[+v]);
+});
 
 /* location sheet */
 function openSheet() { $('sheet').hidden = false; renderSaved(); $('results').innerHTML = ''; setTimeout(() => $('searchInput').focus(), 50); }
@@ -575,7 +598,8 @@ function pick(loc) {
   $('placeName').textContent = loc.label;
   $('nowBody').innerHTML = '<div class="msg" style="color:var(--on-sky-dim)">Loading the forecast…</div>';
   $('main').innerHTML = '';
-  closeSheet(); refresh();
+  store.set('wx.loc', loc);
+  closeSheet(); renderCities(); refresh();
 }
 
 $('locBtn').addEventListener('click', openSheet);
@@ -585,7 +609,7 @@ $('sheetGps').addEventListener('click', () => { closeSheet(); useGps(); });
 $('sheet').addEventListener('click', (e) => {
   if (e.target === $('sheet')) return closeSheet();
   const del = e.target.closest('[data-del]');
-  if (del) { e.stopPropagation(); const s = store.get('wx.saved', []); s.splice(+del.dataset.del, 1); store.set('wx.saved', s); return renderSaved(); }
+  if (del) { e.stopPropagation(); const s = store.get('wx.saved', []); s.splice(+del.dataset.del, 1); store.set('wx.saved', s); renderCities(); return renderSaved(); }
   const sv = e.target.closest('[data-saved]');
   if (sv) return pick(store.get('wx.saved', [])[+sv.dataset.saved]);
   const rs = e.target.closest('[data-res]');
@@ -616,6 +640,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- start ---------- */
 (function start() {
+  renderCities();
   const cache = store.get('wx.cache', null);
   if (cache && state.loc && cache.loc && cache.loc.lat === state.loc.lat && cache.loc.lon === state.loc.lon) {
     state.data = cache.data;
