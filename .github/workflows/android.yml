@@ -57,3 +57,16 @@ jobs:
             Then long-press your home screen, choose Widgets, and add "Kikker Forecast".
           files: kikker-forecast.apk
           make_latest: true
+
+      # Also serve the APK from the website: a plain link with no redirect,
+      # which phone browsers download more reliably than release assets.
+      - name: Publish APK on the website
+        run: |
+          mkdir -p download
+          cp kikker-forecast.apk download/kikker-forecast.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add download/kikker-forecast.apk
+          git commit -m "Update APK download (build ${{ github.run_number }}) [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
